@@ -1,0 +1,658 @@
+:root {
+  --bg: #14101f;
+  --bg-grad-1: #1e1530;
+  --bg-grad-2: #120c1c;
+  --panel: #221a33;
+  --panel-2: #2c2140;
+  --border: #3a2d52;
+  --text: #ece7f5;
+  --text-dim: #a99cc4;
+  --accent: #b06fe0;
+  --accent-2: #7c4dff;
+  --village: #4caf82;
+  --wolf: #e0567a;
+  --danger: #e0567a;
+  --gold: #d9b64a;
+  --radius: 16px;
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 800px at 50% -10%, var(--bg-grad-1), transparent 60%),
+    radial-gradient(900px 700px at 90% 110%, #241a3a, transparent 55%),
+    var(--bg-grad-2);
+  background-attachment: fixed;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px 18px 48px;
+  min-height: 100vh;
+}
+
+/* --- 共通コンポーネント --- */
+
+.title {
+  text-align: center;
+  margin: 12px 0 6px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.title .moon {
+  filter: drop-shadow(0 0 12px rgba(176, 111, 224, 0.6));
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 0 0 22px;
+}
+
+.card {
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.card h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: transform 0.08s ease, filter 0.15s ease, background 0.15s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 16px;
+  font-size: 17px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 22px rgba(124, 77, 255, 0.35);
+}
+
+.btn-primary:disabled {
+  filter: grayscale(0.7) brightness(0.6);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  padding: 10px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #e0567a, #b03a5c);
+  color: #fff;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-row > button {
+  flex: 1;
+}
+
+/* --- セットアップ：人数選択 --- */
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin: 6px 0 4px;
+}
+
+.stepper button {
+  width: 52px;
+  height: 52px;
+  font-size: 26px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepper .count {
+  font-size: 44px;
+  font-weight: 800;
+  min-width: 70px;
+  text-align: center;
+}
+
+.stepper .count small {
+  font-size: 16px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+/* --- 名前入力 --- */
+
+.name-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.name-input .num {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-2);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.name-input input {
+  flex: 1;
+  padding: 12px 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #1a1428;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.name-input input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* --- 役職構成 --- */
+
+.role-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #1b1529;
+  margin-bottom: 10px;
+  border: 1px solid transparent;
+}
+
+.role-row .role-emoji {
+  font-size: 26px;
+  width: 34px;
+  text-align: center;
+}
+
+.role-row .role-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.role-row .role-name {
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-row .role-desc {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.team-tag {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.team-village { background: rgba(76, 175, 130, 0.2); color: #6fd6a5; }
+.team-wolf { background: rgba(224, 86, 122, 0.2); color: #f38aa5; }
+.team-fox { background: rgba(230, 162, 60, 0.2); color: #f2c26b; }
+
+.counter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.counter button {
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.counter button:disabled {
+  opacity: 0.3;
+}
+
+.counter .val {
+  width: 22px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.compo-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  border-radius: 12px;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.compo-summary.ok { background: rgba(76, 175, 130, 0.15); color: #6fd6a5; }
+.compo-summary.ng { background: rgba(224, 86, 122, 0.15); color: #f38aa5; }
+
+.preset-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 20px;
+  width: auto;
+}
+
+/* --- 役職配布（パス＆リビール） --- */
+
+.reveal-screen {
+  text-align: center;
+  padding-top: 40px;
+}
+
+.reveal-pass {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 20px 0 8px;
+}
+
+.reveal-name {
+  font-size: 40px;
+  font-weight: 800;
+  margin: 10px 0;
+  color: var(--accent);
+}
+
+.reveal-hint {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+
+.reveal-card {
+  border-radius: 20px;
+  padding: 36px 20px;
+  margin: 24px 0;
+  border: 2px solid;
+  animation: pop 0.35s ease;
+}
+
+@keyframes pop {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.reveal-card .big-emoji {
+  font-size: 72px;
+  line-height: 1;
+}
+
+.reveal-card .role-title {
+  font-size: 34px;
+  font-weight: 800;
+  margin: 12px 0 4px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+  filter: brightness(1.25);
+}
+
+.reveal-card .role-ability {
+  font-size: 14px;
+  color: var(--text);
+  margin: 14px auto 0;
+  max-width: 300px;
+  line-height: 1.7;
+}
+
+.reveal-mates {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 14px;
+}
+
+.reveal-mates strong { color: var(--wolf); }
+
+.progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 20px;
+  flex-wrap: wrap;
+}
+
+.progress-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.progress-dots .dot.done { background: var(--accent); }
+.progress-dots .dot.current {
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(176, 111, 224, 0.25);
+}
+
+/* --- フェーズ表示 --- */
+
+.phase-banner {
+  text-align: center;
+  padding: 24px 16px;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  font-weight: 800;
+}
+
+.phase-banner.night {
+  background: linear-gradient(135deg, #1e2a52, #0f1530);
+  border: 1px solid #2c3d70;
+}
+
+.phase-banner.day {
+  background: linear-gradient(135deg, #4a3a1a, #2e2410);
+  border: 1px solid #6b5424;
+}
+
+.phase-banner .phase-icon { font-size: 40px; }
+.phase-banner .phase-name { font-size: 24px; margin-top: 4px; }
+.phase-banner .phase-day { font-size: 14px; color: var(--text-dim); font-weight: 600; }
+
+/* --- プレイヤー選択リスト --- */
+
+.player-select {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.player-chip {
+  padding: 14px 10px;
+  border-radius: 12px;
+  background: #1b1529;
+  border: 2px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.player-chip.selected {
+  border-color: var(--accent);
+  background: rgba(176, 111, 224, 0.18);
+}
+
+.player-chip.dead {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.player-chip:disabled {
+  cursor: not-allowed;
+}
+
+.player-chip .chip-role {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* --- タイマー --- */
+
+.timer-display {
+  text-align: center;
+  font-size: 64px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  margin: 10px 0;
+  letter-spacing: 0.02em;
+}
+
+.timer-display.warn { color: var(--gold); }
+.timer-display.danger { color: var(--danger); animation: pulse 1s infinite; }
+
+@keyframes pulse {
+  50% { opacity: 0.5; }
+}
+
+/* --- 結果表示 --- */
+
+.result-banner {
+  text-align: center;
+  padding: 36px 20px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.result-banner.village { background: linear-gradient(135deg, #1e5a3f, #123726); }
+.result-banner.wolf { background: linear-gradient(135deg, #6b2438, #3d1420); }
+.result-banner.fox { background: linear-gradient(135deg, #7a5220, #4a3010); }
+
+.result-banner .win-emoji { font-size: 64px; }
+.result-banner .win-title { font-size: 30px; font-weight: 800; margin: 8px 0 4px; }
+.result-banner .win-reason { font-size: 14px; opacity: 0.9; }
+
+.roster {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.roster li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #1b1529;
+  margin-bottom: 8px;
+}
+
+.roster .r-emoji { font-size: 24px; }
+.roster .r-name { font-weight: 700; flex: 1; }
+.roster .r-status {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+
+.roster .alive { background: rgba(76, 175, 130, 0.2); color: #6fd6a5; }
+.roster .dead { background: rgba(224, 86, 122, 0.2); color: #f38aa5; }
+
+/* --- 情報系・その他 --- */
+
+.info-box {
+  background: rgba(124, 77, 255, 0.1);
+  border: 1px solid rgba(124, 77, 255, 0.3);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 13.5px;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.result-msg {
+  padding: 18px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 16px 0;
+}
+
+.result-msg.wolf-found { background: rgba(224, 86, 122, 0.2); color: #f38aa5; }
+.result-msg.safe { background: rgba(76, 175, 130, 0.2); color: #6fd6a5; }
+
+.deaths-list {
+  text-align: center;
+  margin: 16px 0;
+}
+
+.deaths-list .death-item {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 10px;
+}
+
+.peaceful {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 16px;
+  padding: 20px;
+}
+
+.step-guide {
+  counter-reset: step;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+
+.step-guide li {
+  position: relative;
+  padding: 8px 8px 8px 40px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.step-guide li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 6px;
+  top: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.log-list li {
+  font-size: 13px;
+  padding: 7px 10px;
+  border-left: 2px solid var(--border);
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.log-list li .log-day {
+  color: var(--accent);
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.footer-note {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 11px;
+  margin-top: 24px;
+  opacity: 0.6;
+}
+
+.hidden { display: none !important; }
