@@ -104,6 +104,16 @@ const PRESETS = {
   12: { villager: 4, werewolf: 3, seer: 1, medium: 1, hunter: 1, madman: 1, fox: 1 },
 };
 
+/**
+ * AI観戦モード用のプリセット（欺瞞・推理が映える役職構成）
+ */
+const AI_PRESETS = {
+  5: { villager: 2, werewolf: 1, seer: 1, madman: 1 },
+  6: { villager: 3, werewolf: 2, seer: 1 },
+  7: { villager: 3, werewolf: 2, seer: 1, madman: 1 },
+  8: { villager: 4, werewolf: 2, seer: 1, madman: 1 },
+};
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ROLES, PRESETS };
+  module.exports = { ROLES, PRESETS, AI_PRESETS };
 }

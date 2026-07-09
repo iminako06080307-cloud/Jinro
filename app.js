@@ -79,9 +79,19 @@
       </div>
 
       <button class="btn-primary" id="start-btn">ゲームをはじめる</button>
-      <p class="footer-note">このアプリはオフラインで動作します。データは端末外に送信されません。</p>
+
+      <div class="info-box" style="margin-top:16px; background:rgba(176,111,224,0.12); border-color:rgba(176,111,224,0.35);">
+        🤖 <strong>AI観戦モード</strong>：AI同士が人狼をプレイ。人狼が嘘をつき、占い師や村人が推理する様子を——
+        各AIの<strong>本音つき</strong>で観戦できます（APIキー不要のデモ付き）。
+      </div>
+      <button class="btn-secondary" id="ai-btn">🤖 AI観戦モードへ</button>
+
+      <p class="footer-note">通常モードはオフラインで動作します。AI観戦モードはAnthropic APIを利用します。</p>
     `);
     document.getElementById('start-btn').onclick = renderSetup;
+    document.getElementById('ai-btn').onclick = () => {
+      if (window.AIGame) window.AIGame.start();
+    };
   }
 
   // ============ セットアップ：人数と名前 ============
@@ -819,6 +829,9 @@
   }
 
   // ============ 起動 ============
+
+  // AI観戦モードから通常のホームへ戻るためのフック
+  window.JinroApp = { home: () => { game.reset(); renderHome(); } };
 
   renderHome();
 })();
