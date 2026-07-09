@@ -17,12 +17,14 @@ const AIGame = (function () {
     { name: 'シロ', color: '#c9c9d6', emoji: '⚪' },
     { name: 'オレンジ', color: '#e6934c', emoji: '🟠' },
     { name: 'モモ', color: '#f2a0c0', emoji: '🌸' },
+    { name: 'チャ', color: '#a07850', emoji: '🟤' },
+    { name: 'クロ', color: '#5a6072', emoji: '⚫' },
   ];
 
   const game = new WerewolfGame();
   let cfg = null;
   const state = {
-    playerCount: 6,
+    playerCount: 7,
     log: [],            // { kind, ... } 表示用イベント
     revealThoughts: false,
     running: false,
@@ -48,13 +50,20 @@ const AIGame = (function () {
       `<option value="${m.id}" ${cfg.model === m.id ? 'selected' : ''}>${esc(m.label)}</option>`).join('');
 
     app.innerHTML = `
-      <h1 class="title">🤖 AI観戦モード</h1>
-      <p class="subtitle">AI同士が人狼をプレイ。嘘と推理の応酬を観戦しよう</p>
+      <h1 class="title">🤖 AI人狼</h1>
+      <p class="subtitle">AI同士が演じる人狼ゲーム。嘘と推理の応酬を観戦しよう</p>
 
       <div class="info-box">
         AIプレイヤーが役職を演じ、<strong>人狼は嘘をつき、村人や占い師は推理します</strong>。
-        各AIの「公開発言」だけでなく <strong>本音（本当の役職・意図）</strong> も後から覗けるので、
+        各AIの「公開発言」だけでなく <strong>本音（本当の役職・意図）</strong> も覗けるので、
         AIがどう欺き・どう見抜くかを研究的に観察できます。
+      </div>
+
+      <div class="info-box" style="background:rgba(63,169,160,0.1); border-color:rgba(63,169,160,0.35);">
+        📜 <strong>この村のルール</strong><br>
+        ・1日目の<strong>昼（議論）からスタート</strong>します<br>
+        ・🛡️ボディーガードは毎晩一人を護衛（自分は守れない／護衛された人は襲撃されても助かる）<br>
+        ・🐺<strong>人狼同士もお互いが誰か分かりません</strong>。誤って仲間を襲うことも…
       </div>
 
       <div class="card">
@@ -94,10 +103,7 @@ const AIGame = (function () {
         </div>
       </div>
 
-      <div class="btn-row">
-        <button class="btn-secondary" id="back">戻る</button>
-        <button class="btn-primary" id="start">観戦をはじめる ▶</button>
-      </div>
+      <button class="btn-primary" id="start">観戦をはじめる ▶</button>
       <p class="footer-note">AIの応答には数秒かかります。人数が多いほど1日の進行に時間がかかります。</p>
     `;
 
@@ -105,7 +111,7 @@ const AIGame = (function () {
       if (state.playerCount > 5) { state.playerCount--; renderSetup(); }
     };
     document.getElementById('plus').onclick = () => {
-      if (state.playerCount < 8) { state.playerCount++; renderSetup(); }
+      if (state.playerCount < 10) { state.playerCount++; renderSetup(); }
     };
     app.querySelectorAll('.mode-btn').forEach((b) => {
       b.onclick = () => { cfg.provider = b.dataset.provider; persistFromForm(); renderSetup(); };
@@ -115,9 +121,6 @@ const AIGame = (function () {
     const keyEl = document.getElementById('apikey');
     if (keyEl) keyEl.oninput = () => { cfg.apiKey = keyEl.value.trim(); };
 
-    document.getElementById('back').onclick = () => {
-      if (window.JinroApp) window.JinroApp.home();
-    };
     document.getElementById('start').onclick = () => {
       persistFromForm();
       if (cfg.provider === 'real' && !cfg.apiKey) {
@@ -153,7 +156,7 @@ const AIGame = (function () {
     state.aborted = false;
     state.running = true;
 
-    pushLog({ kind: 'banner', text: `AI観戦人狼 開始（${state.playerCount}人）`, icon: '🎬' });
+    pushLog({ kind: 'banner', text: `AI人狼 開始（${state.playerCount}人・1日目の昼から）`, icon: '🎬' });
     pushLog({ kind: 'roster' });
     renderGame();
     runGameLoop().catch((e) => {
@@ -171,31 +174,10 @@ const AIGame = (function () {
   // ============ ゲーム進行（非同期ループ）============
 
   async function runGameLoop() {
+    // 1日目は昼（議論）からスタートする
     while (!state.aborted) {
-      // ---- 夜 ----
-      pushLog({ kind: 'banner', text: `${game.day}日目の夜`, icon: '🌙', cls: 'night' });
-      await runNight();
-      if (state.aborted) return;
-
-      const dawn = game.resolveNight({
-        attackTargetId: game._pendingAttack,
-        guardTargetId: null,
-      });
-      game._pendingAttack = null;
-
-      // ---- 朝：死亡報告 ----
-      pushLog({ kind: 'banner', text: `${game.day}日目の朝`, icon: '☀️', cls: 'day' });
-      if (dawn.deaths.length === 0) {
-        pushLog({ kind: 'system', text: '昨夜は誰も欠けなかった。' });
-      } else {
-        dawn.deaths.forEach((d) =>
-          pushLog({ kind: 'death', name: d.name, text: `${d.name} が無残な姿で発見された。` }));
-      }
-
-      let win = game.checkWin();
-      if (win) return finish(win);
-
       // ---- 昼：議論 ----
+      pushLog({ kind: 'banner', text: `${game.day}日目の昼`, icon: '☀️', cls: 'day' });
       pushLog({ kind: 'system', text: '── 議論タイム ──' });
       state.discussionHistory = [];
       for (const p of game.alivePlayers()) {
@@ -208,10 +190,34 @@ const AIGame = (function () {
       await runVote();
       if (state.aborted) return;
 
-      win = game.checkWin();
+      let win = game.checkWin();
       if (win) return finish(win);
 
-      game.nextNight();
+      // ---- 夜 ----
+      pushLog({ kind: 'banner', text: `${game.day}日目の夜`, icon: '🌙', cls: 'night' });
+      await runNight();
+      if (state.aborted) return;
+
+      const dawn = game.resolveNight({
+        attackTargetId: game._pendingAttack,
+        guardTargetId: game._pendingGuard,
+      });
+      game._pendingAttack = null;
+      game._pendingGuard = null;
+
+      game.nextNight(); // 翌日へ
+
+      // ---- 朝：死亡報告 ----
+      pushLog({ kind: 'banner', text: `${game.day}日目の朝`, icon: '🌅', cls: 'day' });
+      if (dawn.deaths.length === 0) {
+        pushLog({ kind: 'system', text: '昨夜は誰も欠けなかった。（護衛が成功したのかもしれない…）' });
+      } else {
+        dawn.deaths.forEach((d) =>
+          pushLog({ kind: 'death', name: d.name, text: `${d.name} が無残な姿で発見された。` }));
+      }
+
+      win = game.checkWin();
+      if (win) return finish(win);
     }
   }
 
@@ -236,13 +242,34 @@ const AIGame = (function () {
       }
     }
 
-    // 人狼（各自が襲撃先を提案 → 最多を採用）
+    // ボディーガード（自分以外を護衛。護衛先は襲撃されても死なない）
+    game._pendingGuard = null;
+    const hunters = game.alivePlayers().filter((p) => p.role === 'hunter');
+    for (const hunter of hunters) {
+      const candidates = game.alivePlayers().filter((p) => p.id !== hunter.id);
+      const res = await askAction(hunter, 'guard', candidates,
+        'あなたはボディーガードです。今夜、人狼の襲撃から守る人を一人選んでください。自分自身は守れません。誰が狙われそうか読み、本音の理由も述べてください。');
+      const target = resolveTargetName(res.target, candidates);
+      if (target) {
+        game._pendingGuard = target.id;
+        game._addLog(`ボディーガードが${target.name}を護衛した`);
+        pushLog({
+          kind: 'night', name: hunter.name, role: 'hunter',
+          thought: res.thought, action: `${target.name} を護衛`,
+        });
+      }
+    }
+
+    // 人狼（仲間が誰かは知らない。各自が襲撃先を提案 → 最多を採用）
     const wolves = game.alivePlayers().filter((p) => p.role === 'werewolf');
     const votes = {};
     for (const wolf of wolves) {
-      const candidates = game.alivePlayers().filter((p) => p.role !== 'werewolf');
+      // 仲間を知らないため、自分以外の全員が対象（誤って仲間を襲うこともある）
+      const candidates = game.alivePlayers().filter((p) => p.id !== wolf.id);
       const res = await askAction(wolf, 'attack', candidates,
-        'あなたは人狼です。仲間と協力し、今夜襲撃する村人を一人選んでください。本音（狙いや戦略）も述べてください。');
+        'あなたは人狼です。今夜襲撃する相手を一人選んでください。' +
+        'ただしこの村では人狼同士もお互いが誰か分かりません。相手が仲間の人狼なら襲撃で殺してしまいます。' +
+        '議論の内容から仲間らしき相手を避けつつ、村の要人を狙ってください。本音（推測や戦略）も述べてください。');
       const target = resolveTargetName(res.target, candidates);
       if (target) {
         votes[target.id] = (votes[target.id] || 0) + 1;
@@ -322,10 +349,9 @@ const AIGame = (function () {
     const role = ROLES[player.role];
     let extra = '';
     if (player.role === 'werewolf') {
-      const mates = game.playersByRole('werewolf').filter((p) => p.id !== player.id).map((p) => p.name);
-      extra = mates.length
-        ? `\nあなたの人狼仲間: ${mates.join('、')}。仲間とは協力し、村人には正体を絶対に隠してください。`
-        : '\nあなたは唯一の人狼です。正体を絶対に隠してください。';
+      extra = '\n重要: この村では人狼同士もお互いが誰か分かりません。あなたは他の人狼を知らず、他の人狼もあなたを知りません。' +
+        '発言や投票の傾向から仲間らしき人物を推測し、夜の襲撃で誤って仲間を殺さないよう注意してください。' +
+        '正体は村人にも（仲間かもしれない相手にも）絶対に明かさないでください。';
     } else if (player.role === 'seer') {
       const known = (state.seerKnowledge[player.id] || [])
         .map((k) => `${k.name}=${k.result === 'wolf' ? '人狼' : '人狼でない'}`).join('、');
@@ -402,8 +428,8 @@ const AIGame = (function () {
         ${state.running
           ? `<button class="btn-secondary" id="stop">■ 観戦を中止</button>`
           : `<div class="btn-row">
-               <button class="btn-secondary" id="again">もう一度</button>
-               <button class="btn-primary" id="home">最初の画面へ</button>
+               <button class="btn-secondary" id="setup">⚙ 設定に戻る</button>
+               <button class="btn-primary" id="again">▶ 同じ設定でもう一局</button>
              </div>`}
       </div>
     `;
@@ -412,10 +438,10 @@ const AIGame = (function () {
     if (rev) rev.onchange = () => { state.revealThoughts = rev.checked; renderGame(); };
     const stop = document.getElementById('stop');
     if (stop) stop.onclick = () => { state.aborted = true; state.running = false; pushLog({ kind: 'system', text: '観戦を中止しました。' }); };
+    const setup = document.getElementById('setup');
+    if (setup) setup.onclick = renderSetup;
     const again = document.getElementById('again');
-    if (again) again.onclick = renderSetup;
-    const home = document.getElementById('home');
-    if (home) home.onclick = () => { if (window.JinroApp) window.JinroApp.home(); };
+    if (again) again.onclick = startGame;
 
     // 最新へスクロール
     const logEl = document.getElementById('ai-log');
@@ -466,6 +492,10 @@ const AIGame = (function () {
             ${thoughtBlock(e.thought)}
           </div>`;
       case 'night':
+        // ネタバレ防止：本音表示がオフの間は誰が何をしたか伏せる
+        if (!state.revealThoughts) {
+          return `<div class="ai-sys">🌙 誰かがひそかに動いた…（「🔬 AIの本音を表示」で見られます）</div>`;
+        }
         return `<div class="ai-bubble ai-night-act">
             <div class="ai-bubble-head">${avatar(e.name)}<strong>${esc(e.name)}</strong>${roleBadge(e.role)}<span class="ai-tag">夜の行動</span></div>
             <div class="ai-action">🌙 ${esc(e.action)}</div>
@@ -491,4 +521,7 @@ const AIGame = (function () {
   return { start: renderSetup };
 })();
 
-if (typeof window !== 'undefined') window.AIGame = AIGame;
+if (typeof window !== 'undefined') {
+  window.AIGame = AIGame;
+  AIGame.start(); // アプリはAI人狼専用。起動したらすぐ設定画面へ
+}

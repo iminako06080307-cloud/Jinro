@@ -20,8 +20,8 @@ const ROLES = {
     team: 'wolf',
     emoji: '🐺',
     color: '#e0567a',
-    short: '夜に村人を襲撃する。正体を隠して村人を欺こう。',
-    ability: '夜、人狼全員で相談し村人を一人襲撃します。仲間の人狼が誰かを把握できます。',
+    short: '夜に村人を襲撃する。この村では人狼同士も仲間が誰か分からない。',
+    ability: '夜、襲撃する相手を一人選びます。人狼同士もお互いが誰か分からないため、誤って仲間を襲ってしまう危険があります。',
     winText: '村人の数を人狼の数以下にすれば勝利です。',
   },
   seer: {
@@ -46,12 +46,12 @@ const ROLES = {
   },
   hunter: {
     key: 'hunter',
-    name: '狩人',
+    name: 'ボディーガード',
     team: 'village',
-    emoji: '🏹',
+    emoji: '🛡️',
     color: '#3fa9a0',
-    short: '夜に一人を守り、人狼の襲撃から救うことができる。',
-    ability: '夜、一人を選んで護衛します。護衛した相手が襲撃されても死にません（自分は護衛不可）。',
+    short: '夜に一人を守り、人狼の襲撃から救う。自分自身は守れない。',
+    ability: '夜、自分以外の一人を選んで護衛します。護衛された人はその夜、人狼に襲撃されても死にません。自分自身を守ることはできません。',
     winText: '生き残った人狼を全員追放すれば勝利です。',
   },
   madman: {
@@ -90,30 +90,18 @@ const ROLES = {
 ROLES.medium.name = '霊媒師';
 
 /**
- * プレイヤー人数ごとの推奨編成プリセット
+ * AI人狼のプレイヤー人数ごとの役職構成
+ * ボディーガード入り。1日目は昼スタートなので初日から議論が発生する。
  */
-const PRESETS = {
-  4: { villager: 1, werewolf: 1, seer: 1, madman: 1 },
-  5: { villager: 2, werewolf: 1, seer: 1, madman: 1 },
+const AI_PRESETS = {
+  5: { villager: 2, werewolf: 1, seer: 1, hunter: 1 },
   6: { villager: 2, werewolf: 2, seer: 1, hunter: 1 },
   7: { villager: 2, werewolf: 2, seer: 1, hunter: 1, madman: 1 },
   8: { villager: 3, werewolf: 2, seer: 1, hunter: 1, madman: 1 },
-  9: { villager: 3, werewolf: 2, seer: 1, medium: 1, hunter: 1, madman: 1 },
-  10: { villager: 3, werewolf: 2, seer: 1, medium: 1, hunter: 1, madman: 1, mason: 0 },
-  11: { villager: 4, werewolf: 3, seer: 1, medium: 1, hunter: 1, madman: 1 },
-  12: { villager: 4, werewolf: 3, seer: 1, medium: 1, hunter: 1, madman: 1, fox: 1 },
-};
-
-/**
- * AI観戦モード用のプリセット（欺瞞・推理が映える役職構成）
- */
-const AI_PRESETS = {
-  5: { villager: 2, werewolf: 1, seer: 1, madman: 1 },
-  6: { villager: 3, werewolf: 2, seer: 1 },
-  7: { villager: 3, werewolf: 2, seer: 1, madman: 1 },
-  8: { villager: 4, werewolf: 2, seer: 1, madman: 1 },
+  9: { villager: 3, werewolf: 3, seer: 1, hunter: 1, madman: 1 },
+  10: { villager: 4, werewolf: 3, seer: 1, hunter: 1, madman: 1 },
 };
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ROLES, PRESETS, AI_PRESETS };
+  module.exports = { ROLES, AI_PRESETS };
 }
