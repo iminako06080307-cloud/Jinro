@@ -867,3 +867,87 @@ button:active {
 .ai-controls {
   margin-top: 12px;
 }
+
+/* --- 参加モード --- */
+
+.ai-mychip {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(124, 77, 255, 0.12);
+  border: 1px solid rgba(124, 77, 255, 0.35);
+  margin-bottom: 10px;
+}
+
+.reveal-locked {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.ai-private {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: rgba(124, 77, 255, 0.12);
+  border: 1px dashed rgba(124, 77, 255, 0.5);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 8px 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.ai-bubble.ai-mine {
+  border-color: rgba(124, 77, 255, 0.55);
+  background: linear-gradient(180deg, rgba(124, 77, 255, 0.12), var(--panel));
+}
+
+.ai-me-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: rgba(124, 77, 255, 0.25);
+  color: #c7b3ff;
+}
+
+.human-input {
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 0 0 3px rgba(176, 111, 224, 0.15);
+  animation: fadein 0.25s ease;
+}
+
+.human-turn {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.human-input textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  font-size: 15px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #1a1428;
+  color: var(--text);
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.human-input textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.win-personal {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
