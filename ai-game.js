@@ -42,6 +42,7 @@ const AIGame = (function () {
     humanName: 'あなた',
     humanId: -1,
     playerCount: 7,
+    rounds: 3,           // 投票までに議論を何巡するか
     log: [],
     revealThoughts: false,
     running: false,
@@ -124,6 +125,19 @@ const AIGame = (function () {
       </div>
 
       <div class="card">
+        <p class="section-label">議論の巡数（多いほど話し合ってから投票）</p>
+        <div class="stepper">
+          <button id="r-minus">−</button>
+          <div class="count">${state.rounds}<small>巡</small></div>
+          <button id="r-plus">＋</button>
+        </div>
+        <p style="color:var(--text-dim); font-size:12px; text-align:center; margin-top:8px;">
+          全員が${state.rounds}回ずつ発言してから投票します（順番は毎回シャッフル）。
+          ${cfg.provider === 'real' ? '多いほどAIの応答回数が増え、時間がかかります。' : ''}
+        </p>
+      </div>
+
+      <div class="card">
         <h2>⚙️ AI設定</h2>
         <p class="section-label">動作モード</p>
         <div class="btn-row" style="margin-bottom:14px;">
@@ -159,6 +173,12 @@ const AIGame = (function () {
     };
     document.getElementById('plus').onclick = () => {
       if (state.playerCount < 10) { collectSetupInputs(); state.playerCount++; renderSetup(); }
+    };
+    document.getElementById('r-minus').onclick = () => {
+      if (state.rounds > 1) { collectSetupInputs(); state.rounds--; renderSetup(); }
+    };
+    document.getElementById('r-plus').onclick = () => {
+      if (state.rounds < 5) { collectSetupInputs(); state.rounds++; renderSetup(); }
     };
     app.querySelectorAll('[data-provider]').forEach((b) => {
       b.onclick = () => { collectSetupInputs(); cfg.provider = b.dataset.provider; AI.saveConfig(cfg); renderSetup(); };
@@ -270,14 +290,11 @@ const AIGame = (function () {
 
   async function runGameLoop() {
     while (!state.aborted) {
-      // ---- 昼：議論 ----
+      // ---- 昼：議論（複数巡） ----
       pushLog({ kind: 'banner', text: `${game.day}日目の昼`, icon: '☀️', cls: 'day' });
-      pushLog({ kind: 'system', text: '── 議論タイム ──' });
       addHistory(`--- ${game.day}日目の昼 ---`);
-      for (const p of game.alivePlayers()) {
-        if (state.aborted) return;
-        await runSpeech(p);
-      }
+      await runDiscussion();
+      if (state.aborted) return;
 
       // ---- 投票 ----
       pushLog({ kind: 'system', text: '── 投票 ──' });
@@ -324,19 +341,57 @@ const AIGame = (function () {
     }
   }
 
-  // ---- 昼の発言 ----
-  async function runSpeech(player) {
-    if (isHuman(player)) {
-      const text = await waitHuman({
-        kind: 'speech',
-        title: '🎤 あなたの番です。みんなに向けて発言してください',
-      });
-      if (state.aborted || text == null) return;
-      addHistory(`${player.name}「${text}」`);
-      pushLog({ kind: 'speech', name: player.name, role: player.role, speech: text, human: true });
-      return;
+  function shuffled(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
     }
-    const res = await askSpeech(player);
+    return a;
+  }
+
+  // ---- 昼の議論（複数巡・順番シャッフル） ----
+  async function runDiscussion() {
+    const rounds = state.rounds;
+    for (let r = 1; r <= rounds; r++) {
+      if (state.aborted) return;
+      const isLast = r === rounds;
+      pushLog({ kind: 'round', text: `議論 ${r}巡目 ／ 全${rounds}巡`, last: isLast });
+      addHistory(`（${r}巡目の議論）`);
+
+      const order = shuffled(game.alivePlayers());
+      for (const p of order) {
+        if (state.aborted) return;
+
+        if (isHuman(p) && humanAlive()) {
+          const res = await waitHuman({
+            kind: 'speech',
+            title: `🎤 あなたの番です（議論 ${r}巡目）。話しかけたり、疑問をぶつけてみましょう`,
+            allowPass: true,
+            allowEnd: true,
+          });
+          if (state.aborted || res == null) return;
+          if (res === '__VOTE__') {
+            pushLog({ kind: 'system', text: 'あなたが議論を切り上げました。投票に移ります。' });
+            addHistory('（あなたの提案で議論を終了し投票へ）');
+            return;
+          }
+          if (res === '__PASS__') {
+            pushLog({ kind: 'system', text: `${p.name} は今回は聞き役に回った。` });
+            continue;
+          }
+          addHistory(`${p.name}「${res}」`);
+          pushLog({ kind: 'speech', name: p.name, role: p.role, speech: res, human: true });
+          continue;
+        }
+
+        await runSpeechAI(p, r, rounds, isLast);
+      }
+    }
+  }
+
+  async function runSpeechAI(player, round, totalRounds, isLast) {
+    const res = await askSpeech(player, round, totalRounds, isLast);
     addHistory(`${player.name}「${res.speech}」`);
     pushLog({
       kind: 'speech', name: player.name, role: player.role,
@@ -601,7 +656,7 @@ const AIGame = (function () {
     return `【現在: ${game.day}日目】\n生存者: ${alive}\n死亡者: ${dead}\n\nこれまでの公開ログ（発言・投票・出来事）:\n${talk}`;
   }
 
-  async function askSpeech(player) {
+  async function askSpeech(player, round, totalRounds, isLast) {
     const schema = {
       type: 'object',
       additionalProperties: false,
@@ -611,7 +666,15 @@ const AIGame = (function () {
         speech: { type: 'string', description: '実際に全員に向けて発言する内容（話し言葉で1〜3文）' },
       },
     };
-    const userText = `${publicStateText()}\n\nあなたの番です。全員に向けて発言してください。` +
+    let roundHint;
+    if (isLast) {
+      roundHint = `これは投票前の最終巡（${round}/${totalRounds}巡目）です。` +
+        `そろそろ議論をまとめ、誰が一番怪しいと思うか自分の考えをはっきり示してください。`;
+    } else {
+      roundHint = `まだ議論の途中です（${round}/${totalRounds}巡目）。結論を急がず、` +
+        `他の人の発言を掘り下げたり、疑問をぶつけたり、質問に答えたりして議論を深めてください。同じ主張の繰り返しは避けること。`;
+    }
+    const userText = `${publicStateText()}\n\nあなたの番です。全員に向けて発言してください。${roundHint}\n` +
       `直前の発言には特に反応してください。thought にはあなたの本当の考え（正体や狙い）を、` +
       `speech には実際に口にする発言を書いてください。人狼や狂人なら speech で嘘をついて構いません。`;
     return AI.ask(cfg, {
@@ -691,6 +754,10 @@ const AIGame = (function () {
       };
       ta.focus();
     }
+    const pass = document.getElementById('human-pass');
+    if (pass) pass.onclick = () => submitHuman('__PASS__');
+    const voteNow = document.getElementById('human-vote');
+    if (voteNow) voteNow.onclick = () => submitHuman('__VOTE__');
     app.querySelectorAll('.human-choice').forEach((chip) => {
       chip.onclick = () => submitHuman(chip.dataset.name);
     });
@@ -704,10 +771,16 @@ const AIGame = (function () {
     if (state.awaitingInput) {
       const a = state.awaitingInput;
       if (a.kind === 'speech') {
+        const passBtn = a.allowPass
+          ? `<button class="btn-secondary" id="human-pass">🤐 聞き役に回る（発言しない）</button>` : '';
+        const endBtn = a.allowEnd
+          ? `<button class="btn-ghost" id="human-vote" style="margin-top:4px;">🗳 議論を終えて投票へ進む</button>` : '';
         return `<div class="human-input">
             <p class="human-turn">${esc(a.title)}</p>
             <textarea id="human-text" rows="3" placeholder="例: おはよう。昨日の投票、ちょっと引っかかるんだよね…"></textarea>
             <button class="btn-primary" id="human-send" style="margin-top:8px;">発言する（Ctrl+Enter）</button>
+            ${passBtn}
+            ${endBtn}
           </div>`;
       }
       const chips = a.candidates.map((n) =>
@@ -759,6 +832,8 @@ const AIGame = (function () {
       }
       case 'system':
         return `<div class="ai-sys">${esc(e.text)}</div>`;
+      case 'round':
+        return `<div class="ai-round ${e.last ? 'ai-round-last' : ''}">💬 ${esc(e.text)}${e.last ? '（この巡のあと投票）' : ''}</div>`;
       case 'error':
         return `<div class="ai-sys ai-err">⚠️ ${esc(e.text)}</div>`;
       case 'death':
