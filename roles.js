@@ -92,14 +92,15 @@ ROLES.medium.name = '霊媒師';
 /**
  * AI人狼のプレイヤー人数ごとの役職構成
  * ボディーガード入り。1日目は昼スタートなので初日から議論が発生する。
+ * 狂人は使わず、嘘をつく側は人狼のみとする（人狼同士は仲間を知らない）。
  */
 const AI_PRESETS = {
   5: { villager: 2, werewolf: 1, seer: 1, hunter: 1 },
   6: { villager: 2, werewolf: 2, seer: 1, hunter: 1 },
-  7: { villager: 2, werewolf: 2, seer: 1, hunter: 1, madman: 1 },
-  8: { villager: 3, werewolf: 2, seer: 1, hunter: 1, madman: 1 },
-  9: { villager: 3, werewolf: 3, seer: 1, hunter: 1, madman: 1 },
-  10: { villager: 4, werewolf: 3, seer: 1, hunter: 1, madman: 1 },
+  7: { villager: 3, werewolf: 2, seer: 1, hunter: 1 },
+  8: { villager: 4, werewolf: 2, seer: 1, hunter: 1 },
+  9: { villager: 4, werewolf: 3, seer: 1, hunter: 1 },
+  10: { villager: 5, werewolf: 3, seer: 1, hunter: 1 },
 };
 
 if (typeof module !== 'undefined' && module.exports) {
