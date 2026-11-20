@@ -48,6 +48,7 @@ const AIGame = (function () {
     running: false,
     aborted: false,
     seerKnowledge: {},
+    guardKnowledge: {},
     discussionHistory: [],  // ゲーム全体の公開ログ（日をまたいで保持）
     awaitingInput: null,    // { kind, title, candidates, resolve }
     personaMap: {},         // playerId -> persona
@@ -251,6 +252,7 @@ const AIGame = (function () {
     game.init(names, AI_PRESETS[n]);
     state.log = [];
     state.seerKnowledge = {};
+    state.guardKnowledge = {};
     state.discussionHistory = [];
     state.aborted = false;
     state.running = true;
@@ -521,6 +523,8 @@ const AIGame = (function () {
       if (target) {
         game._pendingGuard = target.id;
         game._addLog(`ボディーガードが${target.name}を護衛した`);
+        state.guardKnowledge[hunter.id] = state.guardKnowledge[hunter.id] || [];
+        state.guardKnowledge[hunter.id].push({ day: game.day, name: target.name });
         pushLog({
           kind: 'night', name: hunter.name, role: 'hunter',
           thought: res.thought, action: `${target.name} を護衛`,
@@ -628,6 +632,13 @@ const AIGame = (function () {
       const known = (state.seerKnowledge[player.id] || [])
         .map((k) => `${k.name}=${k.result === 'wolf' ? '人狼' : '人狼でない'}`).join('、');
       extra = known ? `\nあなたの占い結果: ${known}` : '';
+    } else if (player.role === 'hunter') {
+      const guarded = (state.guardKnowledge[player.id] || [])
+        .map((k) => `${k.day}日目の夜=${k.name}`).join('、');
+      extra = guarded
+        ? `\nあなたがこれまでに護衛した記録: ${guarded}。護衛した相手が襲撃されても死なないため、` +
+          `その夜に誰も死ななかったのはあなたの護衛が成功したためかもしれません。自分の護衛の事実をふまえて発言してください。`
+        : '';
     } else if (player.role === 'madman') {
       extra = '\nあなたは狂人（人狼陣営）です。人狼が誰かは知りませんが、人狼陣営を勝たせるため、嘘や撹乱で村を混乱させてください。占い師を騙るのも有効です。';
     }
