@@ -32,6 +32,22 @@ const AI = (function () {
     localStorage.setItem(STORE_KEY, JSON.stringify(cfg));
   }
 
+  // ---- 発言・本音の末尾に稀に混じる余計な記号を除去 ----
+  // モデルが文末に「や , を付けてしまうことがあり、ログに「」, のように残る。
+  function tidy(s) {
+    if (typeof s !== 'string') return s;
+    let t = s.trim();
+    // 末尾の空白・カンマ類を落とす
+    t = t.replace(/[\s,，、]+$/, '');
+    // 開き括弧が無いのに 」 で終わる場合、その余分な 」 を除去
+    const open = (t.match(/「/g) || []).length;
+    const close = (t.match(/」/g) || []).length;
+    if (close > open) {
+      t = t.replace(/[」\s,，、]+$/, '');
+    }
+    return t;
+  }
+
   // ---- JSONの頑健なパース ----
   function safeParseJson(text) {
     if (!text) throw new Error('空の応答');
@@ -87,7 +103,12 @@ const AI = (function () {
       .filter((b) => b.type === 'text')
       .map((b) => b.text)
       .join('');
-    return safeParseJson(text);
+    const parsed = safeParseJson(text);
+    if (parsed && typeof parsed === 'object') {
+      if (typeof parsed.thought === 'string') parsed.thought = tidy(parsed.thought);
+      if (typeof parsed.speech === 'string') parsed.speech = tidy(parsed.speech);
+    }
+    return parsed;
   }
 
   // ---- モック（APIキー不要）----
