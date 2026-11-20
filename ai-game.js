@@ -749,6 +749,8 @@ const AIGame = (function () {
     if (setup) setup.onclick = renderSetup;
     const again = document.getElementById('again');
     if (again) again.onclick = startGame;
+    const copy = document.getElementById('copylog');
+    if (copy) copy.onclick = () => copyLog(copy);
 
     // 人間入力
     const send = document.getElementById('human-send');
@@ -801,13 +803,93 @@ const AIGame = (function () {
           <div class="player-select">${chips}</div>
         </div>`;
     }
+    const copyBtn = state.log.length
+      ? `<button class="btn-secondary" id="copylog" style="margin-bottom:8px;">📋 ログをコピー（本音つき全文）</button>`
+      : '';
     if (state.running) {
-      return `<button class="btn-ghost" id="stop">■ ゲームを中止</button>`;
+      return copyBtn + `<button class="btn-ghost" id="stop">■ ゲームを中止</button>`;
     }
-    return `<div class="btn-row">
+    return copyBtn + `<div class="btn-row">
         <button class="btn-secondary" id="setup">⚙ 設定に戻る</button>
         <button class="btn-primary" id="again">▶ 同じ設定でもう一局</button>
       </div>`;
+  }
+
+  // ログ全文（本音・役職つき）をテキスト化
+  function buildTranscript() {
+    const modelLabel = (AI.MODELS.find((m) => m.id === cfg.model) || {}).label || cfg.model;
+    const lines = [];
+    lines.push('AI人狼 ログ');
+    lines.push(`日時: ${new Date().toLocaleString('ja-JP')}`);
+    lines.push(`モード: ${state.mode === 'play' ? '参加' : '観戦'}`);
+    lines.push(`モデル: ${cfg.provider === 'mock' ? 'デモ（モック）' : modelLabel}`);
+    lines.push(`人数: ${state.playerCount}人（${describeComposition(state.playerCount)}）`);
+    lines.push(`議論巡数: ${state.rounds}巡`);
+    lines.push('【配役（答え合わせ）】');
+    game.players.forEach((p) => {
+      lines.push(`  ${p.name}：${ROLES[p.role].name}${p.alive ? '' : '（脱落）'}`);
+    });
+    lines.push('────────────────────');
+
+    const roleOf = (r) => (r ? `（${ROLES[r].name}）` : '');
+    state.log.forEach((e) => {
+      switch (e.kind) {
+        case 'banner': lines.push(`\n=== ${e.text} ===`); break;
+        case 'round': lines.push(`-- ${e.text}${e.last ? '（この巡のあと投票）' : ''} --`); break;
+        case 'system': lines.push(e.text); break;
+        case 'death': lines.push(`☠ ${e.text}`); break;
+        case 'private': lines.push(`[あなただけに] ${e.text.replace(/\n/g, ' ')}`); break;
+        case 'error': lines.push(`⚠ ${e.text}`); break;
+        case 'roster': break; // 配役は冒頭に出力済み
+        case 'speech':
+          lines.push(`${e.name}${e.human ? '（あなた）' : roleOf(e.role)}：${e.speech}`);
+          if (e.thought) lines.push(`　〔本音〕${e.thought}`);
+          break;
+        case 'night':
+          lines.push(`${e.name}${roleOf(e.role)} 夜の行動：${e.action}`);
+          if (e.thought) lines.push(`　〔本音〕${e.thought}`);
+          break;
+        case 'vote':
+          lines.push(`${e.name}${e.human ? '（あなた）' : roleOf(e.role)} → ${e.target} に投票`);
+          if (e.thought) lines.push(`　〔本音〕${e.thought}`);
+          break;
+        case 'result':
+          lines.push(`\n★結果：${e.text}（${e.reason}）`);
+          if (e.personal) lines.push(e.personal);
+          break;
+      }
+    });
+    return lines.join('\n');
+  }
+
+  function copyLog(btn) {
+    const text = buildTranscript();
+    const done = () => {
+      if (btn) { btn.textContent = '✓ コピーしました！メモに貼り付けできます'; setTimeout(() => { btn.textContent = '📋 ログをコピー（本音つき全文）'; }, 2500); }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, () => showCopyOverlay(text));
+    } else {
+      showCopyOverlay(text);
+    }
+  }
+
+  // クリップボードが使えない環境向け：手動コピー用のテキスト欄を全画面表示
+  function showCopyOverlay(text) {
+    const ov = document.createElement('div');
+    ov.className = 'copy-overlay';
+    ov.innerHTML = `
+      <div class="copy-sheet">
+        <p>下のテキストを長押しして全選択→コピーし、メモに貼り付けてください。</p>
+        <textarea id="copy-ta" readonly></textarea>
+        <button class="btn-primary" id="copy-close">閉じる</button>
+      </div>`;
+    document.body.appendChild(ov);
+    const ta = ov.querySelector('#copy-ta');
+    ta.value = text;
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch (e) { /* 手動で */ }
+    ov.querySelector('#copy-close').onclick = () => ov.remove();
   }
 
   function roleBadge(role) {
