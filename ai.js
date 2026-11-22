@@ -61,8 +61,11 @@ const AI = (function () {
     }
   }
 
-  // ---- 実API呼び出し ----
-  async function callReal(cfg, system, userText, schema) {
+  // 再試行してもムダなエラー（残高不足・キー不正など）は、このフラグを立てて即中断する。
+  class FatalApiError extends Error {}
+
+  // ---- 実API呼び出し（1回分）----
+  async function callRealOnce(cfg, system, userText, schema) {
     const body = {
       model: cfg.model,
       max_tokens: 1024,
@@ -84,6 +87,7 @@ const AI = (function () {
         body: JSON.stringify(body),
       });
     } catch (netErr) {
+      // 通信の瞬断。再試行する価値あり。
       throw new Error('ネットワークエラー: ' + netErr.message);
     }
 
@@ -93,8 +97,10 @@ const AI = (function () {
         const err = await res.json();
         detail = err.error && err.error.message ? err.error.message : JSON.stringify(err);
       } catch (e) { /* ignore */ }
-      if (res.status === 401) throw new Error('APIキーが無効です（401）。設定を確認してください。');
-      if (res.status === 429) throw new Error('レート制限に達しました（429）。少し待って再試行してください。');
+      // 401=キー不正、400=リクエスト不正や残高不足。再試行しても直らないので即中断。
+      if (res.status === 401) throw new FatalApiError('APIキーが無効です（401）。設定を確認してください。');
+      if (res.status === 400) throw new FatalApiError(`APIエラー 400: ${detail}（APIキーの残高や設定をご確認ください）`);
+      // 429=混雑、5xx=サーバ側の一時不調。再試行する。
       throw new Error(`APIエラー ${res.status}: ${detail}`);
     }
 
@@ -103,12 +109,31 @@ const AI = (function () {
       .filter((b) => b.type === 'text')
       .map((b) => b.text)
       .join('');
-    const parsed = safeParseJson(text);
+    const parsed = safeParseJson(text); // 空なら「空の応答」を投げる → 再試行対象
     if (parsed && typeof parsed === 'object') {
       if (typeof parsed.thought === 'string') parsed.thought = tidy(parsed.thought);
       if (typeof parsed.speech === 'string') parsed.speech = tidy(parsed.speech);
     }
     return parsed;
+  }
+
+  // ---- 実API呼び出し（空の応答・混雑・瞬断は最大2回まで自動で再試行）----
+  async function callReal(cfg, system, userText, schema) {
+    const maxAttempts = 3; // 初回 + 再試行2回
+    let lastErr;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await callRealOnce(cfg, system, userText, schema);
+      } catch (e) {
+        if (e instanceof FatalApiError) throw e; // 残高不足などは即中断
+        lastErr = e;
+        if (attempt < maxAttempts) {
+          // 少し待ってから再試行（1回目0.8秒、2回目1.6秒）
+          await new Promise((r) => setTimeout(r, 800 * attempt));
+        }
+      }
+    }
+    throw lastErr;
   }
 
   // ---- モック（APIキー不要）----

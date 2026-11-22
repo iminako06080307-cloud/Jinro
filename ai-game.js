@@ -688,10 +688,22 @@ const AIGame = (function () {
     const userText = `${publicStateText()}\n\nあなたの番です。全員に向けて発言してください。${roundHint}\n` +
       `直前の発言には特に反応してください。thought にはあなたの本当の考え（正体や狙い）を、` +
       `speech には実際に口にする発言を書いてください。人狼や狂人なら speech で嘘をついて構いません。`;
-    return AI.ask(cfg, {
-      system: baseSystem(player), userText, schema,
-      ctx: { role: player.role, name: player.name }, kind: 'speech',
-    });
+    try {
+      return await AI.ask(cfg, {
+        system: baseSystem(player), userText, schema,
+        ctx: { role: player.role, name: player.name }, kind: 'speech',
+      });
+    } catch (e) {
+      if (isFatalApiError(e)) throw e; // 残高不足・キー不正は止める
+      pushLog({ kind: 'error', text: `（通信が不安定で ${player.name} の発言を取得できませんでした。仮の発言で続行します）` });
+      return { thought: '(通信が不安定で考えがまとまらなかった)', speech: 'ごめん、ちょっと通信が重くて考えがまとまらない。今回はパスするね。' };
+    }
+  }
+
+  // 再試行してもダメなとき、止めるべき致命的エラー（残高不足・キー不正）かどうか
+  function isFatalApiError(e) {
+    const m = (e && e.message) || '';
+    return m.includes('APIキーが無効') || m.includes('APIエラー 400');
   }
 
   async function askAction(player, kind, candidates, instruction) {
@@ -706,10 +718,17 @@ const AIGame = (function () {
       },
     };
     const userText = `${publicStateText()}\n\n${instruction}\n選べる相手: ${names.join('、')}`;
-    return AI.ask(cfg, {
-      system: baseSystem(player), userText, schema,
-      ctx: { role: player.role, name: player.name }, kind, candidates: names,
-    });
+    try {
+      return await AI.ask(cfg, {
+        system: baseSystem(player), userText, schema,
+        ctx: { role: player.role, name: player.name }, kind, candidates: names,
+      });
+    } catch (e) {
+      if (isFatalApiError(e)) throw e; // 残高不足・キー不正は止める
+      const fallback = names[Math.floor(Math.random() * names.length)];
+      pushLog({ kind: 'error', text: `（通信が不安定で ${player.name} の行動を取得できませんでした。仮に ${fallback} を選んで続行します）` });
+      return { thought: '(通信が不安定だったため、やむを得ず選んだ)', target: fallback };
+    }
   }
 
   // ============ 描画 ============
